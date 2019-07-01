@@ -1,14 +1,16 @@
 /**
  * @file    usercounter.c
  * @author  Neil McGlohon
- * @date    6 May 2018
- * @version 0.1
+ * @date    1 July 2019
+ * @version 0.2
  * @brief  A loadable kernel to enable userspace access to the cycle counter
 */
 #include <linux/module.h>     /* Needed by all modules */
 #include <linux/kernel.h>     /* Needed for KERN_INFO */
 #include <linux/init.h>       /* Needed for the macros */
  
+#define PERF_DEF_OPTS (1 | 16)
+
 ///< The license type -- this affects runtime behavior
 MODULE_LICENSE("GPL");
  
@@ -19,20 +21,20 @@ MODULE_AUTHOR("Neil McGlohon");
 MODULE_DESCRIPTION("Enables userspace access to cycle counter");
  
 ///< The version of the module
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");
  
 static void enable_ccnt_read(void* data)
 {
-  // WRITE PMUSERENR = 1
-  asm volatile ("MCR p15, 0, %0, C9, C14, 0\n\t" :: "r"(1));
-  asm volatile ("MCR p15, 0, %0, C9, C14, 2\n\t" :: "r"(0x8000000f));
+    asm volatile("mcr p15, 0, %0, c9, c14, 0" :: "r"(1));
+    asm volatile("mcr p15, 0, %0, c9, c12, 0" :: "r"(PERF_DEF_OPTS));
+    asm volatile("mcr p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
 }
 
 static void disable_ccnt_read(void* data)
 {
-  // WRITE PMUSERENR = 1
-  asm volatile ("MCR p15, 0, %0, C9, C14, 0\n\t" :: "r"(0));
-  asm volatile ("MCR p15, 0, %0, C9, C14, 2\n\t" :: "r"(0));
+    asm volatile("mcr p15, 0, %0, c9, c12, 0" :: "r"(0));
+    asm volatile("mcr p15, 0, %0, c9, c12, 2" :: "r"(0x8000000f));
+    asm volatile("mcr p15, 0, %0, c9, c14, 0" :: "r"(0));
 }
 
 static int __init usercounter_start(void)
